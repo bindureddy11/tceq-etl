@@ -4,6 +4,7 @@ import logging
 from bs4 import BeautifulSoup
 from dateparser import parse as parse_date
 from urllib.parse import urljoin
+from etl.config import TCEQ_PROPOSED_RULES_URL, BASE_STATE_URL, MIN_ROW_CELLS, AGENCY_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ def extract_proposal_rules():
         list: A list of dictionaries, each containing metadata for a proposed rule.
     """
 
-    url = "https://www.tceq.texas.gov/rules/prop.html"
+    url = TCEQ_PROPOSED_RULES_URL
     try:
         # Fetch the web page with a timeout
         r = requests.get(url,timeout=10)
@@ -40,15 +41,17 @@ def extract_proposal_rules():
             th = row.find("th", scope="row")
 
              # Skip rows that don't have the expected structure
-            if not th or len(cells) < 3:
+            if not th or len(cells) < MIN_ROW_CELLS:
                 continue
 
             # Extract proposed date and comments due from the first cell
             date_items = th.find_all("li")
-            proposed_date = comments_due = None
-
+            proposed_date = comments_due = comment_link = None
+            
             for li in date_items:
                 text = li.get_text(strip=True)
+                a_tag = li.find("a", href=True)
+                
                 try:
                     if "Approval Date" in text:
                         # Parse proposed date and convert to string
@@ -56,15 +59,30 @@ def extract_proposal_rules():
                     elif "Comments Due" in text:
                         # Parse comments_due date and convert to string
                         comments_due = str(parse_date(text.split(":", 1)[-1].strip()))
+                    elif a_tag and "commentinput" in a_tag["href"]:  # Match by domain or pattern
+                        # Extract comment link
+                        comment_link = a_tag["href"]
                 except Exception as e:
                     logger.error(f"Error parsing date from text '{text}': {e}")
-                    continue
+                    continue                          
 
             # Extract identifier and title from the cells 
             identifier = cells[0].get_text(strip=True)
-            title = cells[1].get_text(strip=True)
+            title_cell = cells[1]
 
-            base_url = "https://www.tceq.texas.gov"
+            title_tag = title_cell.find("span")
+            title = title_tag.get_text(strip=True) if title_tag else ""
+            # If title is empty, use the text directly from the cell
+            if not title:
+                title = title_cell.get_text(strip=True)
+
+            # Description follows <br>, which becomes part of the next sibling text
+            br_tag = title_cell.find("br")
+            description = ""
+            if br_tag and br_tag.next_sibling:
+                description = br_tag.next_sibling.strip()   
+           
+            base_url = BASE_STATE_URL
             source_links = []
             chapters = []
             chapters_link = []
@@ -79,15 +97,20 @@ def extract_proposal_rules():
                     chapters.append(link_text)
                     chapters_link.append(full_url)
             
+            
+
             # Create a rule dictionary with the extracted data
             rule = {
                 "title": title,
                 "identifier": identifier,
                 "proposed_date": proposed_date,
                 "comments_due": comments_due,
+                "description": description,
                 "chapters": chapters,
                 "sources": source_links,
-                "chapter_links": chapters_link  # pass to transformation
+                "agency" : AGENCY_NAME,
+                "chapter_links": chapters_link,  # pass to transformation 
+                "comment_link": comment_link  
             }
 
             rules.append(rule)

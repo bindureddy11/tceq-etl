@@ -2,10 +2,11 @@
 import json
 import os
 import logging
+from etl.config import OUTPUT_JSON_PATH
 
 logger = logging.getLogger(__name__)
 
-def save_to_json(data, output_path="output/proposed_rules.json"):
+def save_to_json(data, output_path=OUTPUT_JSON_PATH):
     """
     Saves the provided data as a JSON file to the specified output path.
 
@@ -17,6 +18,7 @@ def save_to_json(data, output_path="output/proposed_rules.json"):
     try:
         # Ensure the output directory exists
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        
         # Write the data to a JSON file
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)

@@ -3,6 +3,7 @@ import requests
 import pdfplumber
 import logging
 from io import BytesIO
+from etl.config import PDF_PAGES_TO_EXTRACT, PDF_REQUEST_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
@@ -20,15 +21,15 @@ def extract_text_from_pdfs(pdf_urls):
     for url in pdf_urls:
         try:
             # Download the PDF file
-            response = requests.get(url, timeout=10)
+            response = requests.get(url, timeout=PDF_REQUEST_TIMEOUT)
             response.raise_for_status()
             # Open the PDF from bytes
             with pdfplumber.open(BytesIO(response.content)) as pdf:
                 if not pdf.pages:
                     logger.warning(f"PDF at {url} has no pages.")
                     continue
-                # Extract text from the first two pages for performance
-                for page in pdf.pages[:2]: 
+                # Extract text from the first two pages for easy view
+                for page in pdf.pages[:PDF_PAGES_TO_EXTRACT]: 
                     page_text = page.extract_text()
                     if page_text:
                         combined_text += page_text + "\n"
