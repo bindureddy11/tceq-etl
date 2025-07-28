@@ -1,9 +1,11 @@
 # etl/extract.py
 import requests
-import re
+import logging
 from bs4 import BeautifulSoup
 from dateparser import parse as parse_date
 from urllib.parse import urljoin
+
+logger = logging.getLogger(__name__)
 
 def extract_proposal_rules():
     """
@@ -18,14 +20,14 @@ def extract_proposal_rules():
         r = requests.get(url,timeout=10)
         r.raise_for_status()
     except requests.RequestException as e:
-        print(f"Error fetching url {url}: {e}")
+        logger.error(f"Error fetching url {url}: {e}")
         return []
     # Parse the HTML content using BeautifulSoup
     soup = BeautifulSoup(r.content, "lxml")
     # Find the table containing proposed rules
     table = soup.find("table", class_="table table-striped")
     if not table:
-        print("Warning: Could not find the rules table.")
+        logger.warning("Could not find the rules table.")
         return []
     
     rules = []
@@ -55,7 +57,7 @@ def extract_proposal_rules():
                         # Parse comments_due date and convert to string
                         comments_due = str(parse_date(text.split(":", 1)[-1].strip()))
                 except Exception as e:
-                    print(f"Error parsing date from text '{text}': {e}")
+                    logger.error(f"Error parsing date from text '{text}': {e}")
                     continue
 
             # Extract identifier and title from the cells 

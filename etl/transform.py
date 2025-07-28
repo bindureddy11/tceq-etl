@@ -1,7 +1,10 @@
 # etl/transform.py
 import requests
 import pdfplumber
+import logging
 from io import BytesIO
+
+logger = logging.getLogger(__name__)
 
 def extract_text_from_pdfs(pdf_urls):
     """
@@ -22,7 +25,7 @@ def extract_text_from_pdfs(pdf_urls):
             # Open the PDF from bytes
             with pdfplumber.open(BytesIO(response.content)) as pdf:
                 if not pdf.pages:
-                    print(f"Warning: PDF at {url} has no pages.")
+                    logger.warning(f"PDF at {url} has no pages.")
                     continue
                 # Extract text from the first two pages for performance
                 for page in pdf.pages[:2]: 
@@ -30,9 +33,9 @@ def extract_text_from_pdfs(pdf_urls):
                     if page_text:
                         combined_text += page_text + "\n"
                     else:
-                        print(f"Page in {url} has no extractable text.")
+                        logger.info(f"Page in {url} has no extractable text.")
         except Exception as e:
-            print(f"PDF extraction failed for {url}: {e}")
+            logger.error(f"PDF extraction failed for {url}: {e}")
             continue
     return combined_text.strip()
 
