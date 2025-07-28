@@ -25,6 +25,10 @@ main.py             # Orchestrates the ETL process
 requirements.txt    # Python dependencies
 output/
 └── proposed_rules.json
+tests/
+├── test_extract.py      # pytest for extaction
+├── test_transform.py    # pytest for transformation
+└── test_load.py         # pytest for load
 ```
 
 ## Getting Started
