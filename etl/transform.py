@@ -18,6 +18,9 @@ def extract_text_from_pdfs(pdf_urls):
         str: Combined extracted text from all PDFs.
     """
     combined_text = ""
+    processed = 0
+    skipped = 0
+    failed = 0
     for url in pdf_urls:
         try:
             # Download the PDF file
@@ -27,17 +30,27 @@ def extract_text_from_pdfs(pdf_urls):
             with pdfplumber.open(BytesIO(response.content)) as pdf:
                 if not pdf.pages:
                     logger.warning(f"PDF at {url} has no pages.")
+                    skipped += 1
                     continue
                 # Extract text from the first two pages for easy view
-                for page in pdf.pages[:PDF_PAGES_TO_EXTRACT]: 
+                page_found = False
+                pages = pdf.pages if PDF_PAGES_TO_EXTRACT is None else pdf.pages[:PDF_PAGES_TO_EXTRACT]
+                for page in pages: 
                     page_text = page.extract_text()
                     if page_text:
                         combined_text += page_text + "\n"
+                        page_found = True
                     else:
                         logger.info(f"Page in {url} has no extractable text.")
+                if page_found:
+                    processed += 1
+                else:
+                    skipped += 1
         except Exception as e:
             logger.error(f"PDF extraction failed for {url}: {e}")
+            failed += 1
             continue
+    logger.info(f"Processed {processed} PDFs, skipped {skipped}, failed {failed}.")
     return combined_text.strip()
 
 def enrich_rules_with_full_text(rules):
