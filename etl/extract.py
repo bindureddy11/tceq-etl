@@ -1,13 +1,63 @@
 # etl/extract.py
-import requests
 import logging
+import requests
 from bs4 import BeautifulSoup
 from dateparser import parse as parse_date
 from urllib.parse import urljoin
-from etl.config import TCEQ_PROPOSED_RULES_URL, BASE_STATE_URL, MIN_ROW_CELLS, AGENCY_NAME, PDF_REQUEST_TIMEOUT
+from etl.config import (
+    TCEQ_PROPOSED_RULES_URL,
+    BASE_STATE_URL,
+    MIN_ROW_CELLS,
+    AGENCY_NAME,
+    PDF_REQUEST_TIMEOUT
+)
 
 logger = logging.getLogger(__name__)
 
+# Fetches HTML content from the given URL
+def fetch_html(url):
+    try:
+        response = requests.get(url, timeout=PDF_REQUEST_TIMEOUT)
+        response.raise_for_status()
+        return response.content
+    except requests.RequestException as e:
+        logger.error(f"Error fetching URL {url}: {e}")
+        return None
+
+# Parses date fields and comment submission link from <li> elements
+def parse_dates_and_comment_link(date_items):
+    proposed_date = comments_due = comment_link = None
+    for li in date_items:
+        text = li.get_text(strip=True)
+        a_tag = li.find("a", href=True)
+        try:
+            if "Approval Date" in text:
+                proposed_date = str(parse_date(text.split(":", 1)[-1].strip()))
+            elif "Comments Due" in text:
+                comments_due = str(parse_date(text.split(":", 1)[-1].strip()))
+            elif a_tag and "commentinput" in a_tag["href"]:
+                comment_link = a_tag["href"]
+        except Exception as e:
+            logger.error(f"Error parsing date from '{text}': {e}")
+            continue
+    return proposed_date, comments_due, comment_link
+
+# Extracts chapter and source document links from the table cell
+def extract_links_and_chapters(cell):
+    source_links = []
+    chapters = []
+    chapters_link = []
+    link_items = cell.find_all("a", href=True)
+    for link_tag in link_items:
+        link_text = link_tag.get_text(strip=True)
+        full_url = urljoin(BASE_STATE_URL, link_tag["href"])
+        source_links.append(full_url)
+        if link_text.startswith("Ch."):
+            chapters.append(link_text)
+            chapters_link.append(full_url)
+    return source_links, chapters, chapters_link
+
+# Main function to extract rule metadata from TCEQ proposed rules page
 def extract_proposal_rules():
     """
     Scrapes the TCEQ proposed rules page for regulation metadata.
@@ -15,91 +65,65 @@ def extract_proposal_rules():
         list: A list of dictionaries, each containing metadata for a proposed rule.
     """
 
-    url = TCEQ_PROPOSED_RULES_URL
-    try:
-        # Fetch the web page with a timeout
-        r = requests.get(url,timeout=PDF_REQUEST_TIMEOUT)
-        r.raise_for_status()
-    except requests.RequestException as e:
-        logger.error(f"Error fetching url {url}: {e}")
+    # Step 1: Fetch HTML from the proposed rules page
+    html_content = fetch_html(TCEQ_PROPOSED_RULES_URL)
+    if not html_content:
         return []
-    # Parse the HTML content using BeautifulSoup
-    soup = BeautifulSoup(r.content, "lxml")
-    # Find the table containing proposed rules
+
+    # Step 2: Parse HTML using BeautifulSoup
+    try:
+        soup = BeautifulSoup(html_content, "lxml")
+    except Exception as e:
+        logger.error(f"Error parsing HTML with BeautifulSoup: {e}")
+        return []
+
+    # Step 3: Locate the rules table
     table = soup.find("table", class_="table table-striped")
     if not table:
         logger.warning("Could not find the rules table.")
         return []
-    
-    rules = []
-    if table:
-        tbody = table.find("tbody")
-        rows = tbody.find_all("tr")
 
-        for row in rows:
+    # Step 4: Extract table body and rows
+    try:
+        tbody = table.find("tbody")
+        rows = tbody.find_all("tr") if tbody else []
+        if not rows:
+            logger.warning("No <tr> rows found in the <tbody> of the rules table.")
+            return []
+    except Exception as e:
+        logger.error(f"Error accessing table structure: {e}")
+        return []
+
+    rules = []
+
+    # Step 5: Process each row
+    for row in rows:
+        try:
             cells = row.find_all("td")
             th = row.find("th", scope="row")
 
-             # Skip rows that don't have the expected structure
+            # Skip malformed rows
             if not th or len(cells) < MIN_ROW_CELLS:
                 continue
 
-            # Extract proposed date and comments due from the first cell
-            date_items = th.find_all("li")
-            proposed_date = comments_due = comment_link = None
-            
-            for li in date_items:
-                text = li.get_text(strip=True)
-                a_tag = li.find("a", href=True)
-                
-                try:
-                    if "Approval Date" in text:
-                        # Parse proposed date and convert to string
-                        proposed_date = str(parse_date(text.split(":", 1)[-1].strip()))
-                    elif "Comments Due" in text:
-                        # Parse comments_due date and convert to string
-                        comments_due = str(parse_date(text.split(":", 1)[-1].strip()))
-                    elif a_tag and "commentinput" in a_tag["href"]:  # Match by domain or pattern
-                        # Extract comment link
-                        comment_link = a_tag["href"]
-                except Exception as e:
-                    logger.error(f"Error parsing date from text '{text}': {e}")
-                    continue                          
-
-            # Extract identifier and title from the cells 
+            # Extract identifier and title
             identifier = cells[0].get_text(strip=True)
             title_cell = cells[1]
-
             title_tag = title_cell.find("span")
-            title = title_tag.get_text(strip=True) if title_tag else ""
-            # If title is empty, use the text directly from the cell
-            if not title:
-                title = title_cell.get_text(strip=True)
+            title = title_tag.get_text(strip=True) if title_tag else title_cell.get_text(strip=True)
 
-            # Description follows <br>, which becomes part of the next sibling text
+            # Extract description from the <br> tag's next sibling
             br_tag = title_cell.find("br")
-            description = ""
-            if br_tag and br_tag.next_sibling:
-                description = br_tag.next_sibling.strip()   
-           
-            base_url = BASE_STATE_URL
-            source_links = []
-            chapters = []
-            chapters_link = []
-            link_items = cells[2].find_all("a", href=True)
+            description = br_tag.next_sibling.strip() if br_tag and br_tag.next_sibling else ""
 
-            # Extract links and chapter information
-            for link_tag in link_items:
-                link_text = link_tag.get_text(strip=True)
-                full_url = urljoin(base_url, link_tag["href"])
-                source_links.append(full_url)
-                if link_text.startswith("Ch."):
-                    chapters.append(link_text)
-                    chapters_link.append(full_url)
-            
-            
+            # Extract proposed date, comments due, and comment link
+            date_items = th.find_all("li")
+            proposed_date, comments_due, comment_link = parse_dates_and_comment_link(date_items)
 
-            # Create a rule dictionary with the extracted data
+            # Extract document/chapter links from third cell
+            source_links, chapters, chapters_link = extract_links_and_chapters(cells[2])
+
+            # Create structured rule dictionary
             rule = {
                 "title": title,
                 "identifier": identifier,
@@ -108,11 +132,16 @@ def extract_proposal_rules():
                 "description": description,
                 "chapters": chapters,
                 "sources": source_links,
-                "agency" : AGENCY_NAME,
-                "chapter_links": chapters_link,  # pass to transformation 
-                "comment_link": comment_link  
+                "agency": AGENCY_NAME,
+                "chapter_links": chapters_link,
+                "comment_link": comment_link
             }
 
             rules.append(rule)
 
+        except Exception:
+            logger.exception("Error processing a row")
+            continue
+
+    # Step 6: Return all collected rule dictionaries
     return rules

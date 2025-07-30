@@ -18,7 +18,7 @@ LOG_DIR = "logs"
 LOG_FILE_PATH = os.path.join(LOG_DIR, "etl.log")
 
 # Number of PDF pages to extract text from
-PDF_PAGES_TO_EXTRACT = 2
+PDF_PAGES_TO_EXTRACT = 2 # None means extract all pages
 
 # PDF request timeout (seconds)
 PDF_REQUEST_TIMEOUT = 10
