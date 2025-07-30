@@ -139,8 +139,8 @@ def extract_proposal_rules():
 
             rules.append(rule)
 
-        except Exception:
-            logger.exception("Error processing a row")
+        except Exception as e:
+            logger.exception(f"Error processing a row: {e}")
             continue
 
     # Step 6: Return all collected rule dictionaries
