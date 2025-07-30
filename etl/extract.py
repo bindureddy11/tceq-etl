@@ -4,7 +4,7 @@ import logging
 from bs4 import BeautifulSoup
 from dateparser import parse as parse_date
 from urllib.parse import urljoin
-from etl.config import TCEQ_PROPOSED_RULES_URL, BASE_STATE_URL, MIN_ROW_CELLS, AGENCY_NAME
+from etl.config import TCEQ_PROPOSED_RULES_URL, BASE_STATE_URL, MIN_ROW_CELLS, AGENCY_NAME, PDF_REQUEST_TIMEOUT
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ def extract_proposal_rules():
     url = TCEQ_PROPOSED_RULES_URL
     try:
         # Fetch the web page with a timeout
-        r = requests.get(url,timeout=10)
+        r = requests.get(url,timeout=PDF_REQUEST_TIMEOUT)
         r.raise_for_status()
     except requests.RequestException as e:
         logger.error(f"Error fetching url {url}: {e}")

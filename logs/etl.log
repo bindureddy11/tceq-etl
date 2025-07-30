@@ -22,15 +22,15 @@
 2025-07-29 13:43:22,220 [INFO] Data successfully saved to output/proposed_rules.json
 2025-07-29 13:43:22,220 [INFO] Done.
 2025-07-29 13:43:22,220 [INFO] Total pipeline run time: 69.98 seconds.
-2025-07-29 13:50:47,481 [INFO] Extracting rules...
-2025-07-29 13:50:48,079 [INFO] Enriching with full text from PDFs...
-2025-07-29 13:50:49,100 [INFO] Processed 2 PDFs, skipped 0, failed 0.
-2025-07-29 13:50:49,793 [INFO] Processed 1 PDFs, skipped 0, failed 0.
-2025-07-29 13:50:50,269 [INFO] Processed 1 PDFs, skipped 0, failed 0.
-2025-07-29 13:50:50,704 [INFO] Processed 1 PDFs, skipped 0, failed 0.
-2025-07-29 13:50:51,293 [INFO] Processed 1 PDFs, skipped 0, failed 0.
-2025-07-29 13:50:51,738 [INFO] Processed 1 PDFs, skipped 0, failed 0.
-2025-07-29 13:50:51,738 [INFO] Saving to output/proposed_rules.json...
-2025-07-29 13:50:51,762 [INFO] Data successfully saved to output/proposed_rules.json
-2025-07-29 13:50:51,762 [INFO] Done.
-2025-07-29 13:50:51,763 [INFO] Total pipeline run time: 4.28 seconds.
+2025-07-29 22:05:59,999 [INFO] Extracting rules...
+2025-07-29 22:06:00,647 [INFO] Enriching with full text from PDFs...
+2025-07-29 22:06:02,640 [INFO] Processed 2 PDFs, skipped 0, failed 0.
+2025-07-29 22:06:03,777 [INFO] Processed 1 PDFs, skipped 0, failed 0.
+2025-07-29 22:06:04,288 [INFO] Processed 1 PDFs, skipped 0, failed 0.
+2025-07-29 22:06:04,808 [INFO] Processed 1 PDFs, skipped 0, failed 0.
+2025-07-29 22:06:05,541 [INFO] Processed 1 PDFs, skipped 0, failed 0.
+2025-07-29 22:06:06,092 [INFO] Processed 1 PDFs, skipped 0, failed 0.
+2025-07-29 22:06:06,093 [INFO] Saving to output/proposed_rules.json...
+2025-07-29 22:06:06,097 [INFO] Data successfully saved to output/proposed_rules.json
+2025-07-29 22:06:06,097 [INFO] Done.
+2025-07-29 22:06:06,097 [INFO] Total pipeline run time: 6.10 seconds.
