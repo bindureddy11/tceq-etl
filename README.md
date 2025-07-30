@@ -35,7 +35,7 @@ tests/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/tceq-etl.git
+   git clone https://github.com/bindureddy11/tceq-etl.git
    cd tceq-etl
    ```
 
